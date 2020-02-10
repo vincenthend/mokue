@@ -47,23 +47,39 @@ export default function main(argv) {
       if (config_data) {
         let content_type
         if(config_data.data){
-          delete require.cache[path.join(process.cwd(), config_data.data)]
-          content = require(path.join(process.cwd(), config_data.data))
-          if(typeof content === 'object'){
-            content_type = 'application/json'
-            content = JSON.stringify(content)
+          if(typeof config_data.data === 'function'){
+            let res = config_data.data()
+            content_type = res[0]
+            content = res[1]
           } else {
-            content_type = 'text/plain'
-            content = content.toString()
+            delete require.cache[path.join(process.cwd(), config_data.data)]
+            content = require(path.join(process.cwd(), config_data.data))
+            if(typeof content === 'object'){
+              content_type = 'application/json'
+              content = JSON.stringify(content)
+            } else {
+              content_type = 'text/plain'
+              content = content.toString()
+            }
           }
         }
         // TODO: do action
-        res.writeHead(200, {
-          'Content-Type': content_type,
-          'Content-Length': content ? Buffer.byteLength(content) : 0
-        })
-        res.write(content)
-        res.end()
+        let delay = 0
+        if(config_data.delay){
+          if(typeof config_data.delay === 'number') {
+            delay = config_data.delay
+          } else if (typeof config_data.delay === 'function') {
+            delay = config_data.delay()
+          }
+        }
+        setTimeout(() => {
+          res.writeHead(200, {
+            'Content-Type': content_type,
+            'Content-Length': content ? Buffer.byteLength(content) : 0
+          })
+          res.write(content)
+          res.end()
+        }, delay)
       } else {
         // Not found in config
         if(config.target){

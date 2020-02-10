@@ -108,6 +108,7 @@ dist
 
 # Sample mock data
 mock/
+mokue.config.js
 
 # IDEA
 .idea/
