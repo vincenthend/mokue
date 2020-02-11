@@ -67,7 +67,6 @@ export default function main(argv) {
 
     function loadContent(file){
       let res_arr = []
-      console.log(file)
       delete require.cache[path.join(process.cwd(), file)]
       let content = require(path.join(process.cwd(), file))
       res_arr[0] = 200
