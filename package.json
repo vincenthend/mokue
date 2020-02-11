@@ -6,10 +6,6 @@
     "mokue": "bin/mock.js"
   },
   "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^13.7.0",
-    "typescript": "^3.7.5"
-  },
   "dependencies": {
     "args": "^5.0.1",
     "chalk": "^3.0.0",

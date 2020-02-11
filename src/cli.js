@@ -41,29 +41,65 @@ export default function main(argv) {
 
   // Start server
   const server = httpserver.createServer((req, res) => {
-    let config_data = config.route[`${req.method} ${req.url}`]
-    let content
+    let config_data = config.route[`${req.method} ${req.url.split('?')[0]}`]
+
+    function forwardRequest() {
+      let url = new URL(req.url, config.target)
+      let proxy = http.request(url, {
+        headers: { ...req.headers, host: url.host, },
+        method: req.method,
+      }, function (r) {
+        res.writeHead(r.statusCode, r.headers)
+        r.pipe(res, {
+          end: true
+        })
+      })
+      req.pipe(proxy, {
+        end: true
+      });
+    }
+
+    function writeResponse(data){
+      res.writeHead(data[0], data[1])
+      res.write(data[2])
+      res.end()
+    }
+
+    function loadContent(file){
+      let res_arr = []
+      console.log(file)
+      delete require.cache[path.join(process.cwd(), file)]
+      let content = require(path.join(process.cwd(), file))
+      res_arr[0] = 200
+      if(typeof content === 'object'){
+        res_arr[1] = 'application/json'
+        res_arr[2] = JSON.stringify(content)
+      } else {
+        res_arr[1] = 'text/plain'
+        res_arr[2] = content.toString()
+      }
+      return res_arr
+    }
+
     try {
+      // If there is a configuration found for the url
       if (config_data) {
-        let content_type
+        let res = []
+        // Check the data
         if(config_data.data){
           if(typeof config_data.data === 'function'){
-            let res = config_data.data()
-            content_type = res[0]
-            content = res[1]
-          } else {
-            delete require.cache[path.join(process.cwd(), config_data.data)]
-            content = require(path.join(process.cwd(), config_data.data))
-            if(typeof content === 'object'){
-              content_type = 'application/json'
-              content = JSON.stringify(content)
-            } else {
-              content_type = 'text/plain'
-              content = content.toString()
+            res = config_data.data(req.url, forwardRequest)
+            if(typeof res === 'string') {
+              res = loadContent(res)
             }
+          } else {
+            res = loadContent(config_data.data)
           }
+        } else {
+          throw new Error('Data cannot be empty!')
         }
-        // TODO: do action
+
+        // Check if there is a delay
         let delay = 0
         if(config_data.delay){
           if(typeof config_data.delay === 'number') {
@@ -72,40 +108,28 @@ export default function main(argv) {
             delay = config_data.delay()
           }
         }
-        setTimeout(() => {
-          res.writeHead(200, {
-            'Content-Type': content_type,
-            'Content-Length': content ? Buffer.byteLength(content) : 0
-          })
-          res.write(content)
-          res.end()
-        }, delay)
+
+        // Write response after delay
+        if(Array.isArray(res) && res.length === 3) {
+          setTimeout(() => {
+            writeResponse([res[0], {
+              'Content-Type': res[1],
+              'Content-Length': res[2] ? Buffer.byteLength(res[2]) : 0
+            }, res[2]])
+          }, delay)
+        }
       } else {
         // Not found in config
         if(config.target){
-          let url = new URL(req.url, config.target)
-          let proxy = http.request(url, {
-            headers: { ...req.headers, host: url.host, },
-            method: req.method,
-          }, function (r) {
-            res.writeHead(r.statusCode, r.headers)
-            r.pipe(res, {
-              end: true
-            })
-          })
-          req.pipe(proxy, {
-            end: true
-          });
+          forwardRequest()
         } else {
-          content = 'Not Found'
-          res.writeHead(404, { 'Content-Type': 'text/plain', 'Content-Length': content.length })
-          res.write(content)
-          res.end()
+          let content = 'Not Found'
+          writeResponse([404, { 'Content-Type': 'text/plain', 'Content-Length': content.length }, content])
         }
       }
     } catch (e) {
-      res.writeHead(503, { 'Content-Type': 'text/plain'})
-      res.end()
+      console.log(e)
+      writeResponse([503, { 'Content-Type': 'text/plain', 'Content-Length': e.message.length }, `Mokue error ${e.message}`])
     }
     logRequest(req, res)
   })
