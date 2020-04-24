@@ -5,6 +5,7 @@ const path = require('path')
 const httpserver = require('http')
 const http = require('follow-redirects').http
 const fs = require('fs')
+const notificationCenter = require('node-notifier/notifiers/notificationcenter')
 
 function loadConfig(configFile){
   let config
@@ -79,6 +80,24 @@ export default function main(argv) {
       }
       return res_arr
     }
+
+    function detectUndefined(req, data){
+      if(req.url.includes('undefined')){
+        notificationCenter().notify({title: 'Undefined in URL detected', message: `Undefined found in ${req.url}`})
+      }
+      if(data.toString().includes('undefined')){
+        notificationCenter().notify({title: 'Undefined in payload detected', message: `Undefined found in ${req.url} payload`})
+      }
+    }
+
+    // Detect undefined in request
+    let data = []
+    req.on('data', chunk => {
+      data.push(chunk)
+    })
+    req.on('end', () => {
+      detectUndefined(req, data)
+    })
 
     try {
       // If there is a configuration found for the url

@@ -10,6 +10,7 @@
     "args": "^5.0.1",
     "chalk": "^3.0.0",
     "esm": "^3.2.25",
-    "follow-redirects": "^1.10.0"
+    "follow-redirects": "^1.10.0",
+    "node-notifier": "^7.0.0"
   }
 }
