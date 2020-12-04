@@ -69,7 +69,13 @@ export default function main(argv) {
     function loadContent(file){
       let res_arr = []
       delete require.cache[path.join(process.cwd(), file)]
-      let content = require(path.join(process.cwd(), file))
+      let content
+      try {
+        content = require(path.join(process.cwd(), file))
+      } catch (e) {
+        content = { success: false }
+        notificationCenter().notify({title: 'Invalid JSON', message: `Invalid JSON Mock Response ${req.url}`})
+      }
       res_arr[0] = 200
       if(typeof content === 'object'){
         res_arr[1] = 'application/json'
@@ -157,5 +163,9 @@ export default function main(argv) {
     server.close()
     console.log('\nExiting...')
     process.exit()
+  })
+
+  process.on('uncaughtException', () => {
+    notificationCenter().notify({title: 'Mokue - Uncaught Exception', message: `Uncaught exception!`})
   })
 }

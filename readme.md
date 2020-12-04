@@ -1,6 +1,6 @@
 # Mokue 🍰
 
-We are also introducing a simple mock server to optionally use with the proxy configuration. Mokue is a mock server designed specially for SPACE Proxy Configurations. Mokue will act as some kind of a proxy server to determine which server should the request go
+We are also introducing a simple mock server to optionally use with the proxy configuration.
 
 
 ### How to get it?
